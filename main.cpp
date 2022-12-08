@@ -22,6 +22,7 @@ struct Recipient {
 string readTheLine() {
     string entryData;
     getline (cin,entryData);
+    cin.sync();
     return entryData;
 }
 
@@ -48,7 +49,7 @@ string makeWordsNotNumbers (int number) {
     return stringNumber;
 }
 
-void splitUserData (string lineOfData, vector <User> &user, string login) {
+void splitUserData (string lineOfData, vector <User> &user) {
 
     string lineOfDataSub = "";
     int rowOfData = 0;
@@ -76,7 +77,7 @@ void splitUserData (string lineOfData, vector <User> &user, string login) {
     rowOfData = 0;
 }
 
-void openUserDataFile (vector <User> &user, string login) {
+vector <User> openUserDataFile (vector <User> &user) {
 
     string lineOfData = "";
     fstream myFile;
@@ -87,12 +88,13 @@ void openUserDataFile (vector <User> &user, string login) {
     myFile.open ("Users.txt",ios::in);
 
     while (getline (myFile,lineOfData) ) {
-        splitUserData (lineOfData, user, login);
+        splitUserData (lineOfData, user);
     }
     myFile.close();
+    return user;
 }
 
-int login (vector <User> user) {
+int login (vector <User> &user) {
 
     string login, pass;
     int amountOfUsers = 0;
@@ -100,7 +102,7 @@ int login (vector <User> user) {
     cout << "Podaj login: ";
     cin >> login;
 
-    openUserDataFile (user, login);
+    user = openUserDataFile (user);
     amountOfUsers = user.size();
 
     int i = 0;
@@ -136,12 +138,29 @@ int readTheLastUserId (vector <User> user) {
     return lastId;
 }
 
-int readTheLastRecipientId (vector <Recipient> recipient) {
-    int lastId = 0;
-    if (!recipient.size() == 0) {
-        int endOfVector = recipient.size()-1;
-        lastId = recipient[endOfVector].id;
+int readTheLastRecipientId () {
+
+    int lastId = 0, dataRow = 0;
+    fstream myFile;
+    string dataLine = "", data = "";
+
+    myFile.open ("Recipients.txt",ios::in);
+
+    while (getline (myFile, dataLine) ) {
+        for (int i = 0; i < (int) dataLine.size(); i++) {
+            if (dataLine[i] != '|') {
+                data.push_back (dataLine[i]);
+            } else if (dataLine[i] == '|') {
+                if (dataRow == 0) {
+                    lastId = makeNubersNotWords (data);
+                }
+                data.erase();
+                dataRow++;
+            }
+        }
+        dataRow = 0;
     }
+    myFile.close();
     return lastId;
 }
 
@@ -277,7 +296,7 @@ void openRecipientDataFile (vector <Recipient> &recipient, int loggedInUserId) {
 void writeAllRecipientsOut (vector <Recipient> recipient) {
     system ( "cls" );
     int amountOfRecipients = recipient.size();
-    cout << "Adresaci : " << amountOfRecipients << endl << endl;
+    cout << "Ilosc adresatow : " << amountOfRecipients << endl << endl;
     for (int i = 0; i < amountOfRecipients; i++) {
         cout << left << setw (10) << "ID uzytkownika: " << recipient[i].userId << endl;
         cout << left << setw (10) << "ID osoby: "       << recipient[i].id << endl;
@@ -375,7 +394,7 @@ vector <Recipient> getDataFromUser (vector <Recipient> &recipient, int loggedInU
 
     string name="", surname="", phoneNumber="", email="", address="";
     Recipient newPerson;
-    int lastId = readTheLastRecipientId (recipient);
+    int lastId = readTheLastRecipientId ();
 
     system ( "cls" );
     cout << "Podaj imie: ";
@@ -446,35 +465,42 @@ void saveTheFile (vector <Recipient> recipient, int loggedInUserId) {
     fstream orgFile, newFile;
     string orgData = "", newData = "", lineOfDataSub = "";
     int orgDataUserId = 0, j = 0;
+    int existingRecipientId = 0;
 
     orgFile.open ("Recipients.txt",ios::in);
     newFile.open ("Recipients_temp.txt",ios::app);
 
     while (getline (orgFile, orgData) ) {
-
         int rowOfData = 0;
         for (int i = 0; i < (int) orgData.size(); i++) {
             if (orgData[i] != '|') {
                 lineOfDataSub.push_back (orgData[i]);
             } else if (orgData[i] == '|') {
                 if (rowOfData == 0) {
-                    lineOfDataSub.erase();
+                    existingRecipientId = makeNubersNotWords (lineOfDataSub);
                 } else if (rowOfData == 1) {
                     orgDataUserId = makeNubersNotWords (lineOfDataSub);
-                    lineOfDataSub.erase();
                 }
+                lineOfDataSub.erase();
                 rowOfData++;
             }
         }
-        if (orgDataUserId == loggedInUserId && (int) recipient.size() > j) {
+        if (orgFile.eof() ) {
+            saveRecipientData (recipient, j, loggedInUserId);
+            j++;
+        } else if (orgDataUserId == loggedInUserId) {
             saveRecipientData (recipient, j, loggedInUserId);
             j++;
         } else if (orgDataUserId != loggedInUserId) {
             newFile << orgData << endl;
         }
     }
+    if (existingRecipientId < recipient[j].id) {
+        saveRecipientData (recipient, j, loggedInUserId);
+    }
     orgFile.close();
     newFile.close();
+    system ("pause");
     remove ("Recipients.txt");
     rename ("Recipients_temp.txt","Recipients.txt");
 }
@@ -665,7 +691,8 @@ int main() {
             cout << "2. Rejestracja" << endl;
             cout << "0. Wyjdz z programu" << endl;
             cout << "Podaj wybor : ";
-            cin >> menuOptions;
+            menuOptions = getchar();
+            cin.sync();
 
             switch (menuOptions) {
             case '1':
@@ -695,6 +722,7 @@ int main() {
             cout << "0. Wyloguj" << endl;
             cout << "Podaj wybor : ";
             menuOptions = getchar();
+            cin.sync();
 
             switch (menuOptions) {
             case '1':

@@ -6,6 +6,7 @@
 #include <iomanip>
 #include <stdio.h>
 #include <windows.h>
+#include <algorithm>
 
 using namespace std;
 
@@ -24,6 +25,14 @@ string readTheLine() {
     getline (cin,entryData);
     cin.sync();
     return entryData;
+}
+
+string changeFirstLetterToCapitalLetter (string word) {
+    if (!word.empty() ) {
+        transform (word.begin(), word.end(), word.begin(), ::tolower);
+        word[0] = toupper (word[0]);
+    }
+    return word;
 }
 
 int makeNubersNotWords (string lineOfDataSub) {
@@ -47,6 +56,56 @@ string makeWordsNotNumbers (int number) {
     string stringNumber = "";
     stringNumber = to_string (number);
     return stringNumber;
+}
+
+int readTheLastUserId (vector <User> user) {
+    int lastId = 0;
+    if (!user.size() == 0) {
+        int endOfVector = user.size()-1;
+        lastId = user[endOfVector].id;
+    }
+    return lastId;
+}
+
+int readTheLastRecipientId () {
+
+    int lastId = 0, dataRow = 0;
+    fstream myFile;
+    string dataLine = "", data = "";
+
+    myFile.open ("Recipients.txt",ios::in);
+
+    while (getline (myFile, dataLine) ) {
+        for (int i = 0; i < (int) dataLine.size(); i++) {
+            if (dataLine[i] != '|') {
+                data.push_back (dataLine[i]);
+            } else if (dataLine[i] == '|') {
+                if (dataRow == 0) {
+                    lastId = makeNubersNotWords (data);
+                }
+                data.erase();
+                dataRow++;
+            }
+        }
+        dataRow = 0;
+    }
+    myFile.close();
+    return lastId;
+}
+
+int readTheId (string lineOfRecipientData) {
+    string recipientId;
+
+    for (int i = 0; i < (int) lineOfRecipientData.size(); i++) {
+        if (lineOfRecipientData[i] != '|') {
+            recipientId.push_back (lineOfRecipientData[i]);
+        } else {
+            cout << "recipient Id: " << recipientId << endl;
+            system("pause");
+            return makeNubersNotWords (recipientId);
+        }
+    }
+    return 0;
 }
 
 void splitUserData (string lineOfData, vector <User> &user) {
@@ -102,10 +161,10 @@ int login (vector <User> &user) {
     cout << "Podaj login: ";
     cin >> login;
 
-    user = openUserDataFile (user);
     amountOfUsers = user.size();
 
     int i = 0;
+
     while (i < amountOfUsers) {
         if (user[i].login == login) {
             for (int j=0; j<3 ; j++) {
@@ -113,92 +172,36 @@ int login (vector <User> &user) {
                 cin >> pass;
                 if (user[i].password == pass) {
                     cout << "Zalogowales sie." << endl;
-                    Sleep (1000);
+                    system ("pause");
                     return user[i].id;
                 }
             }
             cout << "poczekaj 5 sekund, niepoprawne haslo zostalo wpisane 3 razy." << endl;
-            Sleep (5000);
+            system ("pause");
             return 0;
         }
         i++;
     }
     cout << "Nie ma takiego uzytkownika." << endl;
-    Sleep (1500);
+    system ("pause");
     return 0;
 
 }
 
-int readTheLastUserId (vector <User> user) {
-    int lastId = 0;
-    if (!user.size() == 0) {
-        int endOfVector = user.size()-1;
-        lastId = user[endOfVector].id;
-    }
-    return lastId;
-}
+void saveUserData (User newUser) {
+    fstream userDataFile;
+    userDataFile.open ("Users.txt",ios::out | ios::app);
+    if (userDataFile.good() == true) {
+        userDataFile << newUser.id << '|';
+        userDataFile << newUser.login << '|';
+        userDataFile << newUser.password << '|' << endl;
+        userDataFile.close();
 
-int readTheLastRecipientId () {
-
-    int lastId = 0, dataRow = 0;
-    fstream myFile;
-    string dataLine = "", data = "";
-
-    myFile.open ("Recipients.txt",ios::in);
-
-    while (getline (myFile, dataLine) ) {
-        for (int i = 0; i < (int) dataLine.size(); i++) {
-            if (dataLine[i] != '|') {
-                data.push_back (dataLine[i]);
-            } else if (dataLine[i] == '|') {
-                if (dataRow == 0) {
-                    lastId = makeNubersNotWords (data);
-                }
-                data.erase();
-                dataRow++;
-            }
-        }
-        dataRow = 0;
-    }
-    myFile.close();
-    return lastId;
-}
-
-void saveUserData (vector <User> &user, int indexOfPerson, int caseOfExecution) {
-
-    const int AMOUNT_OF_LOOPS = 3;
-    fstream myFile;
-    string personsData = "";
-    int indexOfData = 0;
-
-
-    for (int i = 0; i < AMOUNT_OF_LOOPS; i++) {
-        if (indexOfData == 0) {
-            string id = makeWordsNotNumbers (user[indexOfPerson].id);
-            personsData.append (id);
-        } else if (indexOfData == 1) {
-            personsData.append (user[indexOfPerson].login);
-        } else if (indexOfData == 2) {
-            personsData.append (user[indexOfPerson].password);
-        }
-        personsData.push_back ('|');
-        indexOfData++;
-    }
-
-    if (caseOfExecution == 1) {
-        myFile.open ("Users.txt",ios::app);
-        myFile << personsData << endl;
-        myFile.close();
-    } else if (caseOfExecution == 2) {
-        if (indexOfPerson == 0) {
-            myFile.open ("Users.txt",ios::out);
-            myFile.close();
-        }
-        myFile.open ("Users.txt",ios::app);
-        myFile << personsData << endl;
-        myFile.close();
+        cout << endl << "Dane zapisane pomyslnie" << endl;
+        system ("pause");
     } else {
-        cout << "Nic sie nie stalo, zly kod zapisu do funkcji" << endl;
+        cout << "Nie udlao sie zapisac danych!!" << endl;
+        system ("pause");
     }
 }
 
@@ -227,10 +230,7 @@ vector <User> registerNewUser (vector <User> &user) {
     newUser.password = password;
     newUser.id = lastId+1;
     user.push_back (newUser);
-    saveUserData (user, user.size()-1, 1);
-    cout << "Konto zalozone pomyslnie" << endl;
-    Sleep (1000);
-
+    saveUserData (newUser);
     return user;
 }
 
@@ -277,7 +277,7 @@ void splitRecipientData (string lineOfData,vector <Recipient> &recipient, int lo
     rowOfData = 0;
 }
 
-void openRecipientDataFile (vector <Recipient> &recipient, int loggedInUserId) {
+vector <Recipient> openRecipientDataFile (vector <Recipient> recipient, int loggedInUserId) {
 
     string lineOfData = "";
     fstream myFile;
@@ -291,21 +291,78 @@ void openRecipientDataFile (vector <Recipient> &recipient, int loggedInUserId) {
         splitRecipientData (lineOfData, recipient, loggedInUserId);
     }
     myFile.close();
+    return recipient;
 }
 
-void writeAllRecipientsOut (vector <Recipient> recipient) {
-    system ( "cls" );
-    int amountOfRecipients = recipient.size();
-    cout << "Ilosc adresatow : " << amountOfRecipients << endl << endl;
-    for (int i = 0; i < amountOfRecipients; i++) {
-        cout << left << setw (10) << "ID uzytkownika: " << recipient[i].userId << endl;
-        cout << left << setw (10) << "ID osoby: "       << recipient[i].id << endl;
-        cout << left << setw (10) << "Imie: "           << recipient[i].name << endl;
-        cout << left << setw (10) << "Nazwisko: "       << recipient[i].surname<< endl;
-        cout << left << setw (10) << "Nr. Tel: "        << recipient[i].phoneNumber << endl;
-        cout << left << setw (10) << "Email: "          << recipient[i].email << endl;
-        cout << left << setw (10) << "Adres: "          << recipient[i].address << endl << endl;
+void addNewRecipientToFile ( Recipient newPerson) {
+    fstream recipientDataFile;
+    recipientDataFile.open ("Recipients.txt", ios::out |ios::app);
+
+    if (recipientDataFile.good() == true) {
+        recipientDataFile << newPerson.id << "|";
+        recipientDataFile << newPerson.userId << "|";
+        recipientDataFile << newPerson.name << "|";
+        recipientDataFile << newPerson.surname << "|";
+        recipientDataFile << newPerson.phoneNumber << "|";
+        recipientDataFile << newPerson.email << "|";
+        recipientDataFile << newPerson.address << "|" << endl;
+        recipientDataFile.close();
+
+        cout << left << setw (10) << "Dodano nowa osobe!!" << endl;
+    } else {
+        cout << "Nie udalo sie otworzyc pliku i dopisac nowego adresata." << endl;
+        system ("pause");
     }
+}
+
+vector <Recipient> getDataFromUser (vector <Recipient> &recipient, int loggedInUserId) {
+
+    string name="", surname="", phoneNumber="", email="", address="";
+    Recipient newPerson;
+    int lastId = readTheLastRecipientId ();
+
+    system ( "cls" );
+    cout << "Podaj imie: ";
+    name = changeFirstLetterToCapitalLetter (readTheLine() );
+
+    cout << "Podaj nazwisko: ";
+    surname = changeFirstLetterToCapitalLetter (readTheLine() );
+
+    cout << "Podaj numer telefonu: ";
+    phoneNumber = readTheLine();
+
+    cout << "Podaj email: ";
+    email = readTheLine();
+
+    cout << "Podaj adres: ";
+    address = readTheLine();
+
+    newPerson.id = lastId+1;
+    newPerson.userId = loggedInUserId;
+    newPerson.name = name;
+    newPerson.surname = surname;
+    newPerson.phoneNumber = phoneNumber;
+    newPerson.email = email;
+    newPerson.address = address;
+
+    recipient.push_back (newPerson);
+    addNewRecipientToFile (newPerson);
+    return recipient;
+}
+
+void addNewRecipient (vector <Recipient> &recipient, int loggedInUserId) {
+
+    system ("cls");
+    int index = recipient.size();
+    recipient = getDataFromUser (recipient, loggedInUserId);
+
+    cout << left << setw (10) << "ID osoby: "       << recipient[index].id << endl;
+    cout << left << setw (10) << "ID uzytkownika: " << recipient[index].userId << endl;
+    cout << left << setw (10) << "Imie: "           << recipient[index].name << endl;
+    cout << left << setw (10) << "Nazwisko: "       << recipient[index].surname<< endl;
+    cout << left << setw (10) << "Nr. Tel: "        << recipient[index].phoneNumber << endl;
+    cout << left << setw (10) << "Email: "          << recipient[index].email << endl;
+    cout << left << setw (10) << "Adres: "          << recipient[index].address << endl << endl;
     system ("pause");
 }
 
@@ -314,8 +371,7 @@ void findName (vector <Recipient> recipient) {
     bool foundTheName = false;
     int amountOfRecipients = recipient.size();
     cout << "Podaj imie do wyszukania : ";
-    getchar();
-    searchedName = readTheLine();
+    searchedName = changeFirstLetterToCapitalLetter (readTheLine() );
 
     system ( "cls" );
     for (int i = 0; i < amountOfRecipients; i++) {
@@ -340,8 +396,7 @@ void findSurname (vector <Recipient> recipient) {
     bool foundTheSurname = false;
     int amountOfRecipients = recipient.size();
     cout << "Podaj nazwisko do wyszukania : ";
-    getchar();
-    searchedSurname = readTheLine();
+    searchedSurname = changeFirstLetterToCapitalLetter (readTheLine() );
 
     system ( "cls" );
     for (int i = 0; i < amountOfRecipients; i++) {
@@ -361,165 +416,19 @@ void findSurname (vector <Recipient> recipient) {
     system ("pause");
 }
 
-void passwordChange (vector <User> &user, int loggedInUserId) {
-    string password;
-    char confirmation;
-    int amountOfUsers = user.size();
-    cout << "Podaj nowe haslo: ";
-    cin >> password;
-    for (int i = 0; i < amountOfUsers; i++) {
-        if (user[i].id == loggedInUserId) {
-            cout << "Czy na pewno chcesz zmienic haslo [T/N] : ";
-            cin >> confirmation;
-            if (confirmation == 'T') {
-                user[i].password = password;
-                cout << "Haslo zostalo zmienione" << endl;
-                Sleep (1500);
-            } else if (confirmation == 'N') {
-                cout << "Haslo nie zostalo zmienione" << endl;
-                Sleep (1500);
-            } else {
-                cout << "Nieprawidlowy znak " << endl;
-                break;
-            }
-        }
-    }
-
-    for (int i = 0; i < (int) user.size(); i++) {
-        saveUserData (user, i, 2);
-    }
-}
-
-vector <Recipient> getDataFromUser (vector <Recipient> &recipient, int loggedInUserId) {
-
-    string name="", surname="", phoneNumber="", email="", address="";
-    Recipient newPerson;
-    int lastId = readTheLastRecipientId ();
-
+void writeAllRecipientsOut (vector <Recipient> recipient) {
     system ( "cls" );
-    cout << "Podaj imie: ";
-    cin >> name;
-
-    cout << "Podaj nazwisko: ";
-    cin >> surname;
-
-    cout << "Podaj numer telefonu: ";
-    cin.sync();
-    phoneNumber = readTheLine();
-
-    cout << "Podaj email: ";
-    email = readTheLine();
-
-    cout << "Podaj adres: ";
-    address = readTheLine();
-
-    newPerson.id = lastId+1;
-    newPerson.userId = loggedInUserId;
-    newPerson.name = name;
-    newPerson.surname = surname;
-    newPerson.phoneNumber = phoneNumber;
-    newPerson.email = email;
-    newPerson.address = address;
-
-    recipient.push_back (newPerson);
-
-    return recipient;
-}
-
-void saveRecipientData (vector <Recipient> recipient, int indexOfPerson, int loggedInUserId) {
-
-    const int AMOUNT_OF_LOOPS = 7;
-    fstream myFile;
-    string personsData = "";
-    int indexOfData = 0;
-
-    for (int i = 0; i < AMOUNT_OF_LOOPS; i++) {
-        if (indexOfData == 0) {
-            string id = makeWordsNotNumbers (recipient[indexOfPerson].id);
-            personsData.append (id);
-        } else if (indexOfData == 1) {
-            string userId = makeWordsNotNumbers (loggedInUserId);
-            personsData.append (userId);
-        } else if (indexOfData == 2) {
-            personsData.append (recipient[indexOfPerson].name);
-        } else if (indexOfData == 3) {
-            personsData.append (recipient[indexOfPerson].surname);
-        } else if (indexOfData == 4) {
-            personsData.append (recipient[indexOfPerson].phoneNumber);
-        } else if (indexOfData == 5) {
-            personsData.append (recipient[indexOfPerson].email);
-        } else if (indexOfData == 6) {
-            personsData.append (recipient[indexOfPerson].address);
-        }
-        personsData.push_back ('|');
-        indexOfData++;
+    int amountOfRecipients = recipient.size();
+    cout << "Ilosc adresatow : " << amountOfRecipients << endl << endl;
+    for (int i = 0; i < amountOfRecipients; i++) {
+        cout << left << setw (10) << "ID uzytkownika: " << recipient[i].userId << endl;
+        cout << left << setw (10) << "ID osoby: "       << recipient[i].id << endl;
+        cout << left << setw (10) << "Imie: "           << recipient[i].name << endl;
+        cout << left << setw (10) << "Nazwisko: "       << recipient[i].surname<< endl;
+        cout << left << setw (10) << "Nr. Tel: "        << recipient[i].phoneNumber << endl;
+        cout << left << setw (10) << "Email: "          << recipient[i].email << endl;
+        cout << left << setw (10) << "Adres: "          << recipient[i].address << endl << endl;
     }
-
-    myFile.open ("Recipients_temp.txt",ios::app);
-    myFile << personsData << endl;
-    myFile.close();
-}
-
-void saveTheFile (vector <Recipient> recipient, int loggedInUserId) {
-
-    fstream orgFile, newFile;
-    string orgData = "", newData = "", lineOfDataSub = "";
-    int orgDataUserId = 0, j = 0;
-    int existingRecipientId = 0;
-
-    orgFile.open ("Recipients.txt",ios::in);
-    newFile.open ("Recipients_temp.txt",ios::app);
-
-    while (getline (orgFile, orgData) ) {
-        int rowOfData = 0;
-        for (int i = 0; i < (int) orgData.size(); i++) {
-            if (orgData[i] != '|') {
-                lineOfDataSub.push_back (orgData[i]);
-            } else if (orgData[i] == '|') {
-                if (rowOfData == 0) {
-                    existingRecipientId = makeNubersNotWords (lineOfDataSub);
-                } else if (rowOfData == 1) {
-                    orgDataUserId = makeNubersNotWords (lineOfDataSub);
-                }
-                lineOfDataSub.erase();
-                rowOfData++;
-            }
-        }
-        if (orgFile.eof() ) {
-            saveRecipientData (recipient, j, loggedInUserId);
-            j++;
-        } else if (orgDataUserId == loggedInUserId) {
-            saveRecipientData (recipient, j, loggedInUserId);
-            j++;
-        } else if (orgDataUserId != loggedInUserId) {
-            newFile << orgData << endl;
-        }
-    }
-    if (existingRecipientId < recipient[j].id) {
-        saveRecipientData (recipient, j, loggedInUserId);
-    }
-    orgFile.close();
-    newFile.close();
-    system ("pause");
-    remove ("Recipients.txt");
-    rename ("Recipients_temp.txt","Recipients.txt");
-}
-
-void addNewRecipient (vector <Recipient> &recipient, int loggedInUserId) {
-
-    int index = recipient.size();
-    recipient = getDataFromUser (recipient, loggedInUserId);
-    saveTheFile (recipient, loggedInUserId);
-
-    system ("cls");
-    cout << left << setw (10) << "Dodano nowa osobe!!" << endl;
-    cout << left << setw (10) << "ID osoby: "       << recipient[index].id << endl;
-    cout << left << setw (10) << "ID uzytkownika: " << recipient[index].userId << endl;
-    cout << left << setw (10) << "Imie: "           << recipient[index].name << endl;
-    cout << left << setw (10) << "Nazwisko: "       << recipient[index].surname<< endl;
-    cout << left << setw (10) << "Nr. Tel: "        << recipient[index].phoneNumber << endl;
-    cout << left << setw (10) << "Email: "          << recipient[index].email << endl;
-    cout << left << setw (10) << "Adres: "          << recipient[index].address << endl << endl;
     system ("pause");
 }
 
@@ -532,13 +441,33 @@ bool findTheGivenId (int idToKill, vector <Recipient> recipient) {
     return false;
 }
 
+void saveDataAfterDeletion (vector <Recipient> &recipient, int idToKill) {
+    string data = "";
+    fstream tempFile, orginalFile;
+
+    orginalFile.open ("Recipients.txt", ios::in);
+    tempFile.open ("temp.txt",ios::out);
+
+    while (getline (orginalFile, data) ) {
+        if (readTheId (data) != idToKill) {
+            tempFile << data << endl;
+        }
+    }
+
+    orginalFile.close();
+    tempFile.close();
+
+    remove ("Recipients.txt");
+    rename ("temp.txt","Recipients.txt");
+}
+
 void deleteRecipient (vector <Recipient> &recipient, int loggedInUserId) {
 
     int idToKill = 0;
     char confirmingChar;
     cout << "Wypisac wszystkie osoby? [T/N] : ";
     cin >> confirmingChar;
-    if (confirmingChar == 'T') {
+    if (confirmingChar == 'T' || confirmingChar == 't') {
         writeAllRecipientsOut (recipient);
     }
     cout << "Podaj ID osoby ktora chesz usunac z ksiazki adresowej : ";
@@ -550,20 +479,51 @@ void deleteRecipient (vector <Recipient> &recipient, int loggedInUserId) {
         cout << "Napewno chcesz usunac adresata?" << endl;
         cout << "dla potwierdzenia wpisz 'T': ";
         cin >> confirmingChar;
-        if (confirmingChar == 'T') {
+        if (confirmingChar == 'T' || confirmingChar == 't') {
             for (int i = 0; i < (int) recipient.size(); i++) {
                 if (recipient[i].id == idToKill) {
                     recipient.erase (recipient.begin()+i);
                 }
             }
-            saveTheFile (recipient, loggedInUserId);
+            saveDataAfterDeletion (recipient, idToKill);
         }
     }
     cin.clear();
     system ("pause");
 }
 
+string convertVectorDataToString (vector <Recipient> &recipient, int givenId, int loggedInUserId) {
+    string personsData = "";
+    int indexOfData = 0;
+    const int AMOUNT_OF_LOOPS = 7;
+
+    for (int i = 0; i < AMOUNT_OF_LOOPS; i++) {
+        if (indexOfData == 0) {
+            string id = makeWordsNotNumbers (recipient[givenId].id);
+            personsData.append (id);
+        } else if (indexOfData == 1) {
+            string userId = makeWordsNotNumbers (loggedInUserId);
+            personsData.append (userId);
+        } else if (indexOfData == 2) {
+            personsData.append (recipient[givenId].name);
+        } else if (indexOfData == 3) {
+            personsData.append (recipient[givenId].surname);
+        } else if (indexOfData == 4) {
+            personsData.append (recipient[givenId].phoneNumber);
+        } else if (indexOfData == 5) {
+            personsData.append (recipient[givenId].email);
+        } else if (indexOfData == 6) {
+            personsData.append (recipient[givenId].address);
+        }
+        personsData.push_back ('|');
+        indexOfData++;
+    }
+
+    return personsData;
+}
+
 int positionOfPersonInFile (vector <Recipient> recipient, int idToEdit) {
+
     int i;
     for (i = 0; i < (int) recipient.size(); i++) {
         if (recipient[i].id == idToEdit) {
@@ -573,12 +533,38 @@ int positionOfPersonInFile (vector <Recipient> recipient, int idToEdit) {
     return i;
 }
 
+void saveRecipientDataToFile (vector <Recipient> &recipient, int idToEdit, int loggedInUserId) {
+    fstream tempFile, recipientDataFile;
+    string data = "", editedRecipientdata = "";
+    int positionOfPerson = positionOfPersonInFile(recipient, idToEdit);
+
+    recipientDataFile.open ("Recipients.txt",ios::in);
+    tempFile.open ("temp.txt", ios::out);
+
+    editedRecipientdata = convertVectorDataToString (recipient, positionOfPerson, loggedInUserId);
+
+    while (getline (recipientDataFile,data) ) {
+        if(readTheId (data) != idToEdit){
+            tempFile << data << endl;
+        }else{
+            cout << editedRecipientdata << endl;
+            tempFile << editedRecipientdata << endl;
+        }
+    }
+
+    recipientDataFile.close();
+    tempFile.close();
+
+    remove ("Recipients.txt");
+    rename ("temp.txt","Recipients.txt");
+}
+
 void changeTheName (vector <Recipient> &recipient, int positionOfPerson) {
     string newName = "";
     cout << "Podaj nowe imie: ";
     cin >> newName;
 
-    recipient[positionOfPerson].name = newName;
+    recipient[positionOfPerson].name = changeFirstLetterToCapitalLetter (newName);
     cout << "Pomylsnie zmieniono imie." << endl;
     system ("pause");
 }
@@ -588,7 +574,7 @@ void changeTheSurname (vector <Recipient> &recipient, int positionOfPerson) {
     cout << "Podaj nowe nazwisko: ";
     cin >> newSurname;
 
-    recipient[positionOfPerson].surname = newSurname;
+    recipient[positionOfPerson].surname = changeFirstLetterToCapitalLetter (newSurname);
     cout << "Pomylsnie zmieniono nazwisko." << endl;
     system ("pause");
 }
@@ -639,33 +625,37 @@ void editRecipient (vector <Recipient> &recipient, int loggedInUserId) {
         positionOfPerson = positionOfPersonInFile (recipient, idToEdit);
         while (1) {
             system ( "cls" );
-            cout << "1. imie" << endl;
-            cout << "2. nazwisko" << endl;
-            cout << "3. numer telefonu" << endl;
-            cout << "4. email" << endl;
-            cout << "5. adres" << endl;
-            cout << "0. powrut do menu" << endl;
+            cout << "1. Edytuj imie" << endl;
+            cout << "2. Edytuj nazwisko" << endl;
+            cout << "3. Edytuj numer telefonu" << endl;
+            cout << "4. Edytuj email" << endl;
+            cout << "5. Edytuj adres" << endl;
+            cout << "0. Powrot do menu" << endl;
             cout << "Podaj wybor : ";
             menuOptions = getchar();
 
             switch (menuOptions) {
             case '1':
                 changeTheName (recipient, positionOfPerson);
+                saveRecipientDataToFile (recipient, idToEdit, loggedInUserId);
                 break;
             case '2':
                 changeTheSurname (recipient, positionOfPerson);
+                saveRecipientDataToFile (recipient, idToEdit, loggedInUserId);
                 break;
             case '3':
                 changeThePhoneNumber (recipient, positionOfPerson);
+                saveRecipientDataToFile (recipient, idToEdit, loggedInUserId);
                 break;
             case '4':
                 changeTheEmail (recipient, positionOfPerson);
+                saveRecipientDataToFile (recipient, idToEdit, loggedInUserId);
                 break;
             case '5':
                 changeTheAddress (recipient, positionOfPerson);
+                saveRecipientDataToFile (recipient, idToEdit, loggedInUserId);
                 break;
             case '0':
-                saveTheFile (recipient, loggedInUserId);
                 return;
             }
         }
@@ -674,18 +664,70 @@ void editRecipient (vector <Recipient> &recipient, int loggedInUserId) {
     system ("pause");
 }
 
+void saveUpdatedUserData (vector <User> &user) {
+    fstream userDataFile;
+    string data = "";
+
+    userDataFile.open ("Users.txt",ios::out);
+
+    if (userDataFile.good() == true) {
+        for (vector<User>::iterator itr = user.begin(); itr != user.end(); itr++) {
+            data += makeWordsNotNumbers (itr->id) + '|';
+            data += itr->login + '|';
+            data += itr->password + '|';
+
+            userDataFile << data << endl;
+            data = "";
+        }
+        userDataFile.close();
+
+        cout << endl << "Dane zapisane pomyslnie" << endl;
+        system ("pause");
+    } else {
+
+        cout << "Nie udlao sie zapisac danych!!" << endl;
+        system ("pause");
+    }
+}
+
+void passwordChange (vector <User> &user, int loggedInUserId) {
+    string password;
+    char confirmation;
+    int amountOfUsers = user.size();
+    cout << "Podaj nowe haslo: ";
+    cin >> password;
+    for (int i = 0; i < amountOfUsers; i++) {
+        if (user[i].id == loggedInUserId) {
+            cout << "Czy na pewno chcesz zmienic haslo [T/N] : ";
+            cin >> confirmation;
+            if (confirmation == 'T' || confirmation == 't') {
+                user[i].password = password;
+                saveUpdatedUserData (user);
+                cout << "Haslo zostalo zmienione" << endl;
+                system ("pause");
+            } else if (confirmation == 'N' || confirmation == 'n') {
+                cout << "Haslo nie zostalo zmienione" << endl;
+                system ("pause");
+            } else {
+                cout << "Nieprawidlowy znak " << endl;
+                break;
+            }
+        }
+    }
+}
+
 int main() {
 
     int loggedInUserId = 0;
     int tag = 0;
     char menuOptions;
 
-    vector <Recipient> recipient;
     vector <User> user;
+    vector <Recipient> recipient;
 
     while (1) {
         if (loggedInUserId == 0) {
-
+            user = openUserDataFile (user);
             system ( "cls" );
             cout << "1. Logowanie" << endl;
             cout << "2. Rejestracja" << endl;
@@ -696,8 +738,17 @@ int main() {
 
             switch (menuOptions) {
             case '1':
-                loggedInUserId = login (user);
-                break;
+                if (user.size() == 0) {
+                    cout << "Nie ma zarejestrowanych uzytkownikow!!" << endl;
+                    cout << "Prosze o zarejestrowanie uzytkownika!!" << endl;
+                    system ("pause");
+                    menuOptions = '2';
+                } else if (user.size() >0) {
+                    loggedInUserId = login (user);
+                    break;
+                } else {
+                    break;
+                }
             case '2':
                 user = registerNewUser (user);
                 break;
@@ -706,9 +757,8 @@ int main() {
                 break;
             }
         } else {
-
             if (tag == 0) {
-                openRecipientDataFile (recipient, loggedInUserId);
+                recipient = openRecipientDataFile (recipient, loggedInUserId);
                 tag++;
             }
             system ( "cls" );
